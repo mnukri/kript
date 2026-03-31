@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Staff {
+  staff_id   Int      @id @default(autoincrement())
+  first_name String   @db.VarChar(100)
+  last_name  String   @db.VarChar(100)
+  email      String?  @unique @db.VarChar(255)
+  job_title  String?  @db.VarChar(150)
+  department String?  @db.VarChar(150)
+  hire_date  DateTime? @db.Date
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+
+  assignments    ProgramAssignment[]
+  expenses       ProgramExpense[]
+  salaries       StaffSalary[]
+  salaryCharges  ProgramSalaryCharge[]
+
+  @@map("staff")
+}
+
+model Program {
+  program_id   Int      @id @default(autoincrement())
+  program_name String   @db.VarChar(255)
+  worktag      String   @db.VarChar(100)
+  status       String   @default("active") @db.VarChar(50)
+  pop_start    DateTime? @db.Date
+  pop_end      DateTime? @db.Date
+  total_budget Decimal?  @db.Decimal(15, 2)
+  sponsor      String?  @db.VarChar(255)
+  grant_number String?  @db.VarChar(100)
+  created_at   DateTime @default(now())
+
+  assignments    ProgramAssignment[]
+  expenses       ProgramExpense[]
+  salaryCharges  ProgramSalaryCharge[]
+
+  @@map("programs")
+}
+
+model ProgramAssignment {
+  assignment_id Int      @id @default(autoincrement())
+  staff_id      Int
+  program_id    Int
+  role          String?  @db.VarChar(150)
+  start_date    DateTime? @db.Date
+  end_date      DateTime? @db.Date
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+
+  staff      Staff   @relation(fields: [staff_id], references: [staff_id])
+  program    Program @relation(fields: [program_id], references: [program_id])
+  allocations ProgramAssignmentAllocation[]
+
+  @@unique([staff_id, program_id])
+  @@map("program_assignments")
+}
+
+model ProgramAssignmentAllocation {
+  id            Int      @id @default(autoincrement())
+  assignment_id Int
+  month         DateTime @db.Date
+  percentage    Decimal  @db.Decimal(5, 2)
+  notes         String?
+
+  assignment ProgramAssignment @relation(fields: [assignment_id], references: [assignment_id])
+
+  @@unique([assignment_id, month])
+  @@map("program_assignment_allocations")
+}
+
+model ProgramExpense {
+  expense_id       Int      @id @default(autoincrement())
+  program_id       Int
+  staff_id         Int?
+  expense_date     DateTime @db.Date
+  amount           Decimal  @db.Decimal(15, 2)
+  category         String?  @db.VarChar(100)
+  vendor           String?  @db.VarChar(255)
+  description      String?
+  reference_number String?  @db.VarChar(100)
+  created_at       DateTime @default(now())
+
+  program Program @relation(fields: [program_id], references: [program_id])
+  staff   Staff?  @relation(fields: [staff_id], references: [staff_id])
+
+  @@map("program_expenses")
+}
+
+model StaffSalary {
+  salary_id      Int      @id @default(autoincrement())
+  staff_id       Int
+  annual_salary  Decimal  @db.Decimal(15, 2)
+  effective_date DateTime @db.Date
+  end_date       DateTime? @db.Date
+  notes          String?
+
+  staff Staff @relation(fields: [staff_id], references: [staff_id])
+
+  @@unique([staff_id, effective_date])
+  @@map("staff_salaries")
+}
+
+model ProgramSalaryCharge {
+  charge_id          Int      @id @default(autoincrement())
+  program_id         Int
+  staff_id           Int
+  charge_month       DateTime @db.Date
+  amount_charged     Decimal  @db.Decimal(15, 2)
+  applied_percentage Decimal? @db.Decimal(5, 2)
+  notes              String?
+  created_at         DateTime @default(now())
+
+  program Program @relation(fields: [program_id], references: [program_id])
+  staff   Staff   @relation(fields: [staff_id], references: [staff_id])
+
+  @@map("program_salary_charges")
+}

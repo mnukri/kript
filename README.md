@@ -1,5 +1,14 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Database Setup
+
+Apply the schema and seed data to your PostgreSQL database:
+
+```bash
+psql -U mrobinson -d kript -f db/schema.sql
+psql -U mrobinson -d kript -f db/seed.sql
+```
+
 ## Getting Started
 
 First, run the development server:
