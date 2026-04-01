@@ -1,15 +1,22 @@
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { formatCurrency } from '@/lib/mock-data'
+
+const categoryColor: Record<string, string> = {
+  FTE:  'bg-blue-50 text-blue-700',
+  COOP: 'bg-purple-50 text-purple-700',
+  TEMP: 'bg-orange-50 text-orange-700',
+}
 
 export default async function StaffPage() {
   const staff = await prisma.staff.findMany({
     orderBy: { last_name: 'asc' },
     include: {
-      assignments:  { where: { is_active: true } },
       salaries:     { where: { end_date: null } },
-      salaryCharges: true,
-      expenses:      true,
+      charges:      { select: { amount: true, charge_type: true }, where: { staff: { is_active: true } } },
+      effortEntries: { distinct: ['program_id'] },
     },
   })
 
@@ -27,17 +34,16 @@ export default async function StaffPage() {
               <th className="px-5 py-3 font-medium">Name</th>
               <th className="px-5 py-3 font-medium">Title</th>
               <th className="px-5 py-3 font-medium">Department</th>
+              <th className="px-5 py-3 font-medium">Category</th>
               <th className="px-5 py-3 font-medium text-right">Annual Salary</th>
               <th className="px-5 py-3 font-medium">Programs</th>
               <th className="px-5 py-3 font-medium text-right">Total Charged</th>
-              <th className="px-5 py-3 font-medium text-right">Expenses</th>
             </tr>
           </thead>
           <tbody>
             {staff.map((s) => {
-              const salary        = s.salaries[0]
-              const totalCharged  = s.salaryCharges.reduce((sum, c) => sum + Number(c.amount_charged), 0)
-              const totalExpenses = s.expenses.reduce((sum, e) => sum + Number(e.amount), 0)
+              const salary       = s.salaries[0]
+              const totalCharged = s.charges.reduce((sum, c) => sum + Number(c.amount ?? 0), 0)
               return (
                 <tr key={s.staff_id} className="border-b border-zinc-100 hover:bg-zinc-50">
                   <td className="px-5 py-3">
@@ -48,12 +54,16 @@ export default async function StaffPage() {
                   </td>
                   <td className="px-5 py-3 text-zinc-600">{s.job_title}</td>
                   <td className="px-5 py-3 text-zinc-500">{s.department}</td>
+                  <td className="px-5 py-3">
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${categoryColor[s.labor_category] ?? 'bg-zinc-100 text-zinc-500'}`}>
+                      {s.labor_category}
+                    </span>
+                  </td>
                   <td className="px-5 py-3 text-right text-zinc-700">
                     {salary ? formatCurrency(Number(salary.annual_salary)) : '—'}
                   </td>
-                  <td className="px-5 py-3 text-zinc-600">{s.assignments.length} active</td>
+                  <td className="px-5 py-3 text-zinc-600">{s.effortEntries.length} programs</td>
                   <td className="px-5 py-3 text-right text-zinc-700">{formatCurrency(totalCharged)}</td>
-                  <td className="px-5 py-3 text-right text-zinc-700">{formatCurrency(totalExpenses)}</td>
                 </tr>
               )
             })}

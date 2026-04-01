@@ -1,13 +1,12 @@
 'use client'
 
 import { create } from 'zustand'
-import type { Staff, Program, ProgramExpense, ProgramSalaryCharge } from './types'
+import type { Staff, Program, Charge } from './types'
 
 interface AppState {
-  staff:         Staff[]
-  programs:      Program[]
-  expenses:      ProgramExpense[]
-  salaryCharges: ProgramSalaryCharge[]
+  staff:    Staff[]
+  programs: Program[]
+  charges:  Charge[]
 
   fetchAll: () => Promise<void>
 
@@ -19,13 +18,9 @@ interface AppState {
   updateProgram: (id: number, p: Partial<Program>) => Promise<void>
   deleteProgram: (id: number) => Promise<void>
 
-  addExpense:    (e: Omit<ProgramExpense, 'expense_id'>) => Promise<void>
-  updateExpense: (id: number, e: Partial<ProgramExpense>) => Promise<void>
-  deleteExpense: (id: number) => Promise<void>
-
-  addSalaryCharge:    (c: Omit<ProgramSalaryCharge, 'charge_id'>) => Promise<void>
-  updateSalaryCharge: (id: number, c: Partial<ProgramSalaryCharge>) => Promise<void>
-  deleteSalaryCharge: (id: number) => Promise<void>
+  addCharge:    (c: Omit<Charge, 'charge_id'>) => Promise<void>
+  updateCharge: (id: number, c: Partial<Charge>) => Promise<void>
+  deleteCharge: (id: number) => Promise<void>
 }
 
 async function api<T>(url: string, options?: RequestInit): Promise<T> {
@@ -36,19 +31,17 @@ async function api<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export const useStore = create<AppState>((set) => ({
-  staff:         [],
-  programs:      [],
-  expenses:      [],
-  salaryCharges: [],
+  staff:    [],
+  programs: [],
+  charges:  [],
 
   fetchAll: async () => {
-    const [staff, programs, expenses, salaryCharges] = await Promise.all([
+    const [staff, programs, charges] = await Promise.all([
       api<Staff[]>('/api/staff'),
       api<Program[]>('/api/programs'),
-      api<ProgramExpense[]>('/api/expenses'),
-      api<ProgramSalaryCharge[]>('/api/salary-charges'),
+      api<Charge[]>('/api/charges'),
     ])
-    set({ staff, programs, expenses, salaryCharges })
+    set({ staff, programs, charges })
   },
 
   addStaff: async (s) => {
@@ -77,29 +70,16 @@ export const useStore = create<AppState>((set) => ({
     set((state) => ({ programs: state.programs.filter((x) => x.program_id !== id) }))
   },
 
-  addExpense: async (e) => {
-    const created = await api<ProgramExpense>('/api/expenses', { method: 'POST', body: JSON.stringify(e) })
-    set((state) => ({ expenses: [...state.expenses, created] }))
+  addCharge: async (c) => {
+    const created = await api<Charge>('/api/charges', { method: 'POST', body: JSON.stringify(c) })
+    set((state) => ({ charges: [...state.charges, created] }))
   },
-  updateExpense: async (id, e) => {
-    const updated = await api<ProgramExpense>(`/api/expenses/${id}`, { method: 'PATCH', body: JSON.stringify(e) })
-    set((state) => ({ expenses: state.expenses.map((x) => x.expense_id === id ? updated : x) }))
+  updateCharge: async (id, c) => {
+    const updated = await api<Charge>(`/api/charges/${id}`, { method: 'PATCH', body: JSON.stringify(c) })
+    set((state) => ({ charges: state.charges.map((x) => x.charge_id === id ? updated : x) }))
   },
-  deleteExpense: async (id) => {
-    await api(`/api/expenses/${id}`, { method: 'DELETE' })
-    set((state) => ({ expenses: state.expenses.filter((x) => x.expense_id !== id) }))
-  },
-
-  addSalaryCharge: async (c) => {
-    const created = await api<ProgramSalaryCharge>('/api/salary-charges', { method: 'POST', body: JSON.stringify(c) })
-    set((state) => ({ salaryCharges: [...state.salaryCharges, created] }))
-  },
-  updateSalaryCharge: async (id, c) => {
-    const updated = await api<ProgramSalaryCharge>(`/api/salary-charges/${id}`, { method: 'PATCH', body: JSON.stringify(c) })
-    set((state) => ({ salaryCharges: state.salaryCharges.map((x) => x.charge_id === id ? updated : x) }))
-  },
-  deleteSalaryCharge: async (id) => {
-    await api(`/api/salary-charges/${id}`, { method: 'DELETE' })
-    set((state) => ({ salaryCharges: state.salaryCharges.filter((x) => x.charge_id !== id) }))
+  deleteCharge: async (id) => {
+    await api(`/api/charges/${id}`, { method: 'DELETE' })
+    set((state) => ({ charges: state.charges.filter((x) => x.charge_id !== id) }))
   },
 }))

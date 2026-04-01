@@ -8,9 +8,19 @@ import { Field, inputCls, selectCls } from './field'
 import { formatCurrency } from '@/lib/mock-data'
 
 const blank = (): Omit<Program, 'program_id'> => ({
-  program_name: '', worktag: '', status: 'active',
-  pop_start: '', pop_end: '', total_budget: 0,
-  sponsor: '', grant_number: '',
+  program_name:                              '',
+  worktag:                                   '',
+  status:                                    'active',
+  pop_start:                                 null,
+  pop_end:                                   null,
+  total_budget_burdened:                     null,
+  total_budget_salary_burdened:              null,
+  total_budget_salary_unburdened:            null,
+  total_budget_purchases_unburdened:         null,
+  total_budget_capital_equipment_unburdened: null,
+  sponsor:                                   null,
+  grant_number:                              null,
+  tpoc_staff_id:                             null,
 })
 
 const statusColor: Record<string, string> = {
@@ -20,7 +30,7 @@ const statusColor: Record<string, string> = {
 }
 
 export default function ManagePrograms() {
-  const { programs, addProgram, updateProgram, deleteProgram } = useStore()
+  const { programs, staff, addProgram, updateProgram, deleteProgram } = useStore()
   const [open, setOpen]       = useState(false)
   const [editing, setEditing] = useState<Program | null>(null)
   const [form, setForm]       = useState(blank())
@@ -33,7 +43,21 @@ export default function ManagePrograms() {
 
   function openEdit(p: Program) {
     setEditing(p)
-    setForm({ program_name: p.program_name, worktag: p.worktag, status: p.status, pop_start: p.pop_start, pop_end: p.pop_end, total_budget: p.total_budget, sponsor: p.sponsor, grant_number: p.grant_number })
+    setForm({
+      program_name:                              p.program_name,
+      worktag:                                   p.worktag,
+      status:                                    p.status,
+      pop_start:                                 p.pop_start,
+      pop_end:                                   p.pop_end,
+      total_budget_burdened:                     p.total_budget_burdened,
+      total_budget_salary_burdened:              p.total_budget_salary_burdened,
+      total_budget_salary_unburdened:            p.total_budget_salary_unburdened,
+      total_budget_purchases_unburdened:         p.total_budget_purchases_unburdened,
+      total_budget_capital_equipment_unburdened: p.total_budget_capital_equipment_unburdened,
+      sponsor:                                   p.sponsor,
+      grant_number:                              p.grant_number,
+      tpoc_staff_id:                             p.tpoc_staff_id,
+    })
     setOpen(true)
   }
 
@@ -45,6 +69,7 @@ export default function ManagePrograms() {
   }
 
   const set = (k: keyof typeof form, v: unknown) => setForm((f) => ({ ...f, [k]: v }))
+  const numField = (v: string) => v === '' ? null : Number(v)
 
   return (
     <div className="space-y-4">
@@ -63,7 +88,7 @@ export default function ManagePrograms() {
               <th className="px-4 py-3 text-left font-medium">Worktag</th>
               <th className="px-4 py-3 text-left font-medium">Sponsor</th>
               <th className="px-4 py-3 text-left font-medium">Status</th>
-              <th className="px-4 py-3 text-right font-medium">Budget</th>
+              <th className="px-4 py-3 text-right font-medium">Budget (Burdened)</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -79,7 +104,9 @@ export default function ManagePrograms() {
                 <td className="px-4 py-3">
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColor[p.status]}`}>{p.status}</span>
                 </td>
-                <td className="px-4 py-3 text-right text-zinc-700">{formatCurrency(p.total_budget)}</td>
+                <td className="px-4 py-3 text-right text-zinc-700">
+                  {p.total_budget_burdened != null ? formatCurrency(Number(p.total_budget_burdened)) : '—'}
+                </td>
                 <td className="px-4 py-3 text-right space-x-2">
                   <button onClick={() => openEdit(p)} className="text-xs text-zinc-500 hover:text-zinc-900">Edit</button>
                   <button onClick={() => deleteProgram(p.program_id)} className="text-xs text-red-400 hover:text-red-600">Delete</button>
@@ -101,12 +128,12 @@ export default function ManagePrograms() {
                 <input className={inputCls} value={form.worktag} onChange={(e) => set('worktag', e.target.value)} />
               </Field>
               <Field label="Grant Number">
-                <input className={inputCls} value={form.grant_number} onChange={(e) => set('grant_number', e.target.value)} />
+                <input className={inputCls} value={form.grant_number ?? ''} onChange={(e) => set('grant_number', e.target.value || null)} />
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Sponsor">
-                <input className={inputCls} value={form.sponsor} onChange={(e) => set('sponsor', e.target.value)} />
+                <input className={inputCls} value={form.sponsor ?? ''} onChange={(e) => set('sponsor', e.target.value || null)} />
               </Field>
               <Field label="Status">
                 <select className={selectCls} value={form.status} onChange={(e) => set('status', e.target.value as Program['status'])}>
@@ -118,14 +145,39 @@ export default function ManagePrograms() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Period Start">
-                <input className={inputCls} type="date" value={form.pop_start} onChange={(e) => set('pop_start', e.target.value)} />
+                <input className={inputCls} type="date" value={form.pop_start ?? ''} onChange={(e) => set('pop_start', e.target.value || null)} />
               </Field>
               <Field label="Period End">
-                <input className={inputCls} type="date" value={form.pop_end} onChange={(e) => set('pop_end', e.target.value)} />
+                <input className={inputCls} type="date" value={form.pop_end ?? ''} onChange={(e) => set('pop_end', e.target.value || null)} />
               </Field>
             </div>
-            <Field label="Total Budget ($)">
-              <input className={inputCls} type="number" value={form.total_budget} onChange={(e) => set('total_budget', Number(e.target.value))} />
+            <Field label="TPOC (Technical Point of Contact)">
+              <select className={selectCls} value={form.tpoc_staff_id ?? ''} onChange={(e) => set('tpoc_staff_id', e.target.value === '' ? null : Number(e.target.value))}>
+                <option value="">— None —</option>
+                {staff.map((s) => (
+                  <option key={s.staff_id} value={s.staff_id}>{s.first_name} {s.last_name}</option>
+                ))}
+              </select>
+            </Field>
+            <p className="text-xs font-medium text-zinc-500 pt-1">Budget Breakdown ($)</p>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Total Budget (Burdened)">
+                <input className={inputCls} type="number" value={form.total_budget_burdened ?? ''} onChange={(e) => set('total_budget_burdened', numField(e.target.value))} />
+              </Field>
+              <Field label="Salary Budget (Burdened)">
+                <input className={inputCls} type="number" value={form.total_budget_salary_burdened ?? ''} onChange={(e) => set('total_budget_salary_burdened', numField(e.target.value))} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Salary Budget (Unburdened)">
+                <input className={inputCls} type="number" value={form.total_budget_salary_unburdened ?? ''} onChange={(e) => set('total_budget_salary_unburdened', numField(e.target.value))} />
+              </Field>
+              <Field label="Purchases Budget">
+                <input className={inputCls} type="number" value={form.total_budget_purchases_unburdened ?? ''} onChange={(e) => set('total_budget_purchases_unburdened', numField(e.target.value))} />
+              </Field>
+            </div>
+            <Field label="Capital Equipment Budget">
+              <input className={inputCls} type="number" value={form.total_budget_capital_equipment_unburdened ?? ''} onChange={(e) => set('total_budget_capital_equipment_unburdened', numField(e.target.value))} />
             </Field>
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setOpen(false)} className="px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900">Cancel</button>

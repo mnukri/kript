@@ -2,20 +2,20 @@
 
 import { useState } from 'react'
 import { useStore } from '@/lib/store'
-import type { Staff } from '@/lib/types'
+import type { Staff, LaborCategory } from '@/lib/types'
 import Modal from './modal'
 import { Field, inputCls, selectCls } from './field'
 
 const blank = (): Omit<Staff, 'staff_id'> => ({
-  first_name: '', last_name: '', email: '', job_title: '',
-  department: '', hire_date: '', is_active: true,
+  first_name: '', last_name: '', email: null, job_title: null,
+  department: null, labor_category: 'FTE', hire_date: null, is_active: true,
 })
 
 export default function ManageStaff() {
   const { staff, addStaff, updateStaff, deleteStaff } = useStore()
-  const [open, setOpen]     = useState(false)
+  const [open, setOpen]       = useState(false)
   const [editing, setEditing] = useState<Staff | null>(null)
-  const [form, setForm]     = useState(blank())
+  const [form, setForm]       = useState(blank())
 
   function openAdd() {
     setEditing(null)
@@ -25,7 +25,16 @@ export default function ManageStaff() {
 
   function openEdit(s: Staff) {
     setEditing(s)
-    setForm({ first_name: s.first_name, last_name: s.last_name, email: s.email, job_title: s.job_title, department: s.department, hire_date: s.hire_date, is_active: s.is_active })
+    setForm({
+      first_name:     s.first_name,
+      last_name:      s.last_name,
+      email:          s.email,
+      job_title:      s.job_title,
+      department:     s.department,
+      labor_category: s.labor_category,
+      hire_date:      s.hire_date,
+      is_active:      s.is_active,
+    })
     setOpen(true)
   }
 
@@ -54,6 +63,7 @@ export default function ManageStaff() {
               <th className="px-4 py-3 text-left font-medium">Name</th>
               <th className="px-4 py-3 text-left font-medium">Title</th>
               <th className="px-4 py-3 text-left font-medium">Department</th>
+              <th className="px-4 py-3 text-left font-medium">Category</th>
               <th className="px-4 py-3 text-left font-medium">Email</th>
               <th className="px-4 py-3 text-left font-medium">Hired</th>
               <th className="px-4 py-3 text-left font-medium">Active</th>
@@ -66,6 +76,9 @@ export default function ManageStaff() {
                 <td className="px-4 py-3 font-medium text-zinc-900">{s.first_name} {s.last_name}</td>
                 <td className="px-4 py-3 text-zinc-600">{s.job_title}</td>
                 <td className="px-4 py-3 text-zinc-500">{s.department}</td>
+                <td className="px-4 py-3">
+                  <span className="px-2 py-0.5 rounded text-xs bg-zinc-100 text-zinc-600">{s.labor_category}</span>
+                </td>
                 <td className="px-4 py-3 text-zinc-500">{s.email}</td>
                 <td className="px-4 py-3 text-zinc-400 text-xs">{s.hire_date}</td>
                 <td className="px-4 py-3">
@@ -95,17 +108,28 @@ export default function ManageStaff() {
               </Field>
             </div>
             <Field label="Email">
-              <input className={inputCls} type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
+              <input className={inputCls} type="email" value={form.email ?? ''} onChange={(e) => set('email', e.target.value || null)} />
             </Field>
-            <Field label="Job Title">
-              <input className={inputCls} value={form.job_title} onChange={(e) => set('job_title', e.target.value)} />
-            </Field>
-            <Field label="Department">
-              <input className={inputCls} value={form.department} onChange={(e) => set('department', e.target.value)} />
-            </Field>
-            <Field label="Hire Date">
-              <input className={inputCls} type="date" value={form.hire_date} onChange={(e) => set('hire_date', e.target.value)} />
-            </Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Job Title">
+                <input className={inputCls} value={form.job_title ?? ''} onChange={(e) => set('job_title', e.target.value || null)} />
+              </Field>
+              <Field label="Department">
+                <input className={inputCls} value={form.department ?? ''} onChange={(e) => set('department', e.target.value || null)} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Labor Category">
+                <select className={selectCls} value={form.labor_category} onChange={(e) => set('labor_category', e.target.value as LaborCategory)}>
+                  <option value="FTE">FTE</option>
+                  <option value="COOP">COOP</option>
+                  <option value="TEMP">TEMP</option>
+                </select>
+              </Field>
+              <Field label="Hire Date">
+                <input className={inputCls} type="date" value={form.hire_date ?? ''} onChange={(e) => set('hire_date', e.target.value || null)} />
+              </Field>
+            </div>
             <Field label="Active">
               <select className={selectCls} value={form.is_active ? 'true' : 'false'} onChange={(e) => set('is_active', e.target.value === 'true')}>
                 <option value="true">Yes</option>

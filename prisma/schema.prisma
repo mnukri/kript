@@ -7,98 +7,137 @@ datasource db {
   provider = "postgresql"
 }
 
-model Staff {
-  staff_id   Int      @id @default(autoincrement())
-  first_name String   @db.VarChar(100)
-  last_name  String   @db.VarChar(100)
-  email      String?  @unique @db.VarChar(255)
-  job_title  String?  @db.VarChar(150)
-  department String?  @db.VarChar(150)
-  hire_date  DateTime? @db.Date
-  is_active  Boolean  @default(true)
-  created_at DateTime @default(now())
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
 
-  assignments    ProgramAssignment[]
-  expenses       ProgramExpense[]
+enum LaborCategory {
+  FTE
+  COOP
+  TEMP
+
+  @@map("labor_category")
+}
+
+enum ProgramStatus {
+  active
+  closed
+  pending
+
+  @@map("program_status")
+}
+
+enum ChargeType {
+  effort
+  purchase
+  travel
+
+  @@map("charge_type")
+}
+
+enum ChargeStatus {
+  draft
+  submitted
+  approved
+  rejected
+
+  @@map("charge_status")
+}
+
+// ---------------------------------------------------------------------------
+// Staff
+// ---------------------------------------------------------------------------
+
+model Staff {
+  staff_id       Int            @id @default(autoincrement())
+  first_name     String         @db.VarChar(100)
+  last_name      String         @db.VarChar(100)
+  email          String?        @unique @db.VarChar(255)
+  job_title      String?        @db.VarChar(150)
+  department     String?        @db.VarChar(150)
+  labor_category LaborCategory
+  hire_date      DateTime?      @db.Date
+  is_active      Boolean        @default(true)
+  created_at     DateTime       @default(now())
+
   salaries       StaffSalary[]
-  salaryCharges  ProgramSalaryCharge[]
+  effortEntries  EffortEntry[]
+  charges        Charge[]       @relation("StaffCharges")
+  approvals      Charge[]       @relation("ApprovedCharges")
+  programsAsTpoc Program[]      @relation("TpocStaff")
 
   @@map("staff")
 }
 
-model Program {
-  program_id   Int      @id @default(autoincrement())
-  program_name String   @db.VarChar(255)
-  worktag      String   @db.VarChar(100)
-  status       String   @default("active") @db.VarChar(50)
-  pop_start    DateTime? @db.Date
-  pop_end      DateTime? @db.Date
-  total_budget Decimal?  @db.Decimal(15, 2)
-  sponsor      String?  @db.VarChar(255)
-  grant_number String?  @db.VarChar(100)
-  created_at   DateTime @default(now())
+// ---------------------------------------------------------------------------
+// Fringe rates
+// ---------------------------------------------------------------------------
 
-  assignments    ProgramAssignment[]
-  expenses       ProgramExpense[]
-  salaryCharges  ProgramSalaryCharge[]
+model FringeRate {
+  fringe_rate_id Int           @id @default(autoincrement())
+  labor_category LaborCategory
+  rate           Decimal        @db.Decimal(6, 4)
+  effective_date DateTime       @db.Date
+  end_date       DateTime?      @db.Date
+  notes          String?
+
+  @@unique([labor_category, effective_date])
+  @@map("fringe_rates")
+}
+
+// ---------------------------------------------------------------------------
+// Indirect rates
+// ---------------------------------------------------------------------------
+
+model IndirectRate {
+  indirect_rate_id Int      @id @default(autoincrement())
+  rate_type        String   @db.VarChar(100)
+  rate             Decimal  @db.Decimal(6, 4)
+  effective_date   DateTime @db.Date
+  end_date         DateTime? @db.Date
+  notes            String?
+
+  @@unique([rate_type, effective_date])
+  @@map("indirect_rates")
+}
+
+// ---------------------------------------------------------------------------
+// Programs
+// ---------------------------------------------------------------------------
+
+model Program {
+  program_id                                Int           @id @default(autoincrement())
+  program_name                              String        @db.VarChar(255)
+  worktag                                   String        @db.VarChar(100)
+  status                                    ProgramStatus @default(active)
+  pop_start                                 DateTime?     @db.Date
+  pop_end                                   DateTime?     @db.Date
+  total_budget_burdened                     Decimal?      @db.Decimal(15, 2)
+  total_budget_salary_burdened              Decimal?      @db.Decimal(15, 2)
+  total_budget_salary_unburdened            Decimal?      @db.Decimal(15, 2)
+  total_budget_purchases_unburdened         Decimal?      @db.Decimal(15, 2)
+  total_budget_capital_equipment_unburdened Decimal?      @db.Decimal(15, 2)
+  sponsor                                   String?       @db.VarChar(255)
+  grant_number                              String?       @db.VarChar(100)
+  tpoc_staff_id                             Int?
+  created_at                                DateTime      @default(now())
+
+  tpoc          Staff?        @relation("TpocStaff", fields: [tpoc_staff_id], references: [staff_id])
+  effortEntries EffortEntry[]
+  charges       Charge[]
 
   @@map("programs")
 }
 
-model ProgramAssignment {
-  assignment_id Int      @id @default(autoincrement())
-  staff_id      Int
-  program_id    Int
-  role          String?  @db.VarChar(150)
-  start_date    DateTime? @db.Date
-  end_date      DateTime? @db.Date
-  is_active     Boolean  @default(true)
-  created_at    DateTime @default(now())
-
-  staff      Staff   @relation(fields: [staff_id], references: [staff_id])
-  program    Program @relation(fields: [program_id], references: [program_id])
-  allocations ProgramAssignmentAllocation[]
-
-  @@unique([staff_id, program_id])
-  @@map("program_assignments")
-}
-
-model ProgramAssignmentAllocation {
-  id            Int      @id @default(autoincrement())
-  assignment_id Int
-  month         DateTime @db.Date
-  percentage    Decimal  @db.Decimal(5, 2)
-  notes         String?
-
-  assignment ProgramAssignment @relation(fields: [assignment_id], references: [assignment_id])
-
-  @@unique([assignment_id, month])
-  @@map("program_assignment_allocations")
-}
-
-model ProgramExpense {
-  expense_id       Int      @id @default(autoincrement())
-  program_id       Int
-  staff_id         Int?
-  expense_date     DateTime @db.Date
-  amount           Decimal  @db.Decimal(15, 2)
-  category         String?  @db.VarChar(100)
-  vendor           String?  @db.VarChar(255)
-  description      String?
-  reference_number String?  @db.VarChar(100)
-  created_at       DateTime @default(now())
-
-  program Program @relation(fields: [program_id], references: [program_id])
-  staff   Staff?  @relation(fields: [staff_id], references: [staff_id])
-
-  @@map("program_expenses")
-}
+// ---------------------------------------------------------------------------
+// Staff salaries
+// ---------------------------------------------------------------------------
 
 model StaffSalary {
-  salary_id      Int      @id @default(autoincrement())
+  salary_id      Int       @id @default(autoincrement())
   staff_id       Int
-  annual_salary  Decimal  @db.Decimal(15, 2)
-  effective_date DateTime @db.Date
+  annual_salary  Decimal   @db.Decimal(15, 2)
+  effective_date DateTime  @db.Date
   end_date       DateTime? @db.Date
   notes          String?
 
@@ -108,18 +147,81 @@ model StaffSalary {
   @@map("staff_salaries")
 }
 
-model ProgramSalaryCharge {
-  charge_id          Int      @id @default(autoincrement())
-  program_id         Int
-  staff_id           Int
-  charge_month       DateTime @db.Date
-  amount_charged     Decimal  @db.Decimal(15, 2)
-  applied_percentage Decimal? @db.Decimal(5, 2)
-  notes              String?
-  created_at         DateTime @default(now())
+// ---------------------------------------------------------------------------
+// Effort entries
+// ---------------------------------------------------------------------------
 
-  program Program @relation(fields: [program_id], references: [program_id])
+model EffortEntry {
+  effort_id   Int      @id @default(autoincrement())
+  staff_id    Int
+  program_id  Int
+  effort_date DateTime @db.Date
+  percentage  Decimal  @db.Decimal(5, 2)
+  notes       String?
+  created_at  DateTime @default(now())
+
   staff   Staff   @relation(fields: [staff_id], references: [staff_id])
+  program Program @relation(fields: [program_id], references: [program_id])
 
-  @@map("program_salary_charges")
+  @@unique([staff_id, program_id, effort_date])
+  @@map("effort_entries")
+}
+
+// ---------------------------------------------------------------------------
+// Charges
+// ---------------------------------------------------------------------------
+
+model Charge {
+  charge_id        Int          @id @default(autoincrement())
+  program_id       Int
+  staff_id         Int
+  charge_type      ChargeType
+  charge_date      DateTime     @db.Date
+  amount           Decimal?     @db.Decimal(15, 2)
+  description      String?
+  reference_number Int          @default(1)
+  status           ChargeStatus @default(draft)
+  approved_by      Int?
+  approved_at      DateTime?
+  notes            String?
+  created_at       DateTime     @default(now())
+
+  program         Program               @relation(fields: [program_id], references: [program_id])
+  staff           Staff                 @relation("StaffCharges",   fields: [staff_id],   references: [staff_id])
+  approver        Staff?                @relation("ApprovedCharges", fields: [approved_by], references: [staff_id])
+  travelDetails   ChargeTravelDetails?
+  purchaseDetails ChargePurchaseDetails?
+
+  @@unique([program_id, staff_id, charge_date, charge_type, reference_number])
+  @@map("charges")
+}
+
+// ---------------------------------------------------------------------------
+// Charge travel details
+// ---------------------------------------------------------------------------
+
+model ChargeTravelDetails {
+  charge_id      Int      @id
+  destination    String?  @db.VarChar(255)
+  trip_purpose   String?
+  departure_date DateTime @db.Date
+  return_date    DateTime @db.Date
+
+  charge Charge @relation(fields: [charge_id], references: [charge_id], onDelete: Cascade)
+
+  @@map("charge_travel_details")
+}
+
+// ---------------------------------------------------------------------------
+// Charge purchase details
+// ---------------------------------------------------------------------------
+
+model ChargePurchaseDetails {
+  charge_id Int     @id
+  vendor    String? @db.VarChar(255)
+  category  String? @db.VarChar(100)
+
+  charge Charge @relation(fields: [charge_id], references: [charge_id], onDelete: Cascade)
+
+  @@map("charge_purchase_details")
 }

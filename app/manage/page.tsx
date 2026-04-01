@@ -4,14 +4,12 @@ import { useState, useEffect } from 'react'
 import { useStore } from '@/lib/store'
 import ManageStaff from '@/components/manage/manage-staff'
 import ManagePrograms from '@/components/manage/manage-programs'
-import ManageSalaryCharges from '@/components/manage/manage-salary-charges'
-import ManagePurchases from '@/components/manage/manage-purchases'
+import ManageCharges from '@/components/manage/manage-charges'
 
 const TABS = [
-  { id: 'staff',          label: 'Staff'          },
-  { id: 'programs',       label: 'Programs'        },
-  { id: 'salary-charges', label: 'Salary Charges'  },
-  { id: 'purchases',      label: 'Purchases'       },
+  { id: 'staff',    label: 'Staff'    },
+  { id: 'programs', label: 'Programs' },
+  { id: 'charges',  label: 'Charges'  },
 ]
 
 export default function ManagePage() {
@@ -23,10 +21,9 @@ export default function ManagePage() {
     <div className="max-w-6xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-zinc-900">Manage</h1>
-        <p className="mt-1 text-sm text-zinc-500">Add and edit staff, programs, salary charges, and purchases</p>
+        <p className="mt-1 text-sm text-zinc-500">Add and edit staff, programs, and charges</p>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 border-b border-zinc-200">
         {TABS.map((t) => (
           <button
@@ -43,11 +40,9 @@ export default function ManagePage() {
         ))}
       </div>
 
-      {/* Tab content */}
-      {tab === 'staff'          && <ManageStaff />}
-      {tab === 'programs'       && <ManagePrograms />}
-      {tab === 'salary-charges' && <ManageSalaryCharges />}
-      {tab === 'purchases'      && <ManagePurchases />}
+      {tab === 'staff'    && <ManageStaff />}
+      {tab === 'programs' && <ManagePrograms />}
+      {tab === 'charges'  && <ManageCharges />}
     </div>
   )
 }

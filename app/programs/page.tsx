@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { formatCurrency } from '@/lib/mock-data'
@@ -9,15 +11,15 @@ const statusColor: Record<string, string> = {
 }
 
 export default async function ProgramsPage() {
-  const [programs, expenses, salaryCharges] = await Promise.all([
+  const [programs, charges] = await Promise.all([
     prisma.program.findMany({ orderBy: { program_name: 'asc' } }),
-    prisma.programExpense.findMany({ select: { program_id: true, amount: true } }),
-    prisma.programSalaryCharge.findMany({ select: { program_id: true, amount_charged: true } }),
+    prisma.charge.findMany({ select: { program_id: true, amount: true } }),
   ])
 
   const spendByProgram: Record<number, number> = {}
-  expenses.forEach((e) => { spendByProgram[e.program_id] = (spendByProgram[e.program_id] ?? 0) + Number(e.amount) })
-  salaryCharges.forEach((c) => { spendByProgram[c.program_id] = (spendByProgram[c.program_id] ?? 0) + Number(c.amount_charged) })
+  charges.forEach((c) => {
+    spendByProgram[c.program_id] = (spendByProgram[c.program_id] ?? 0) + Number(c.amount ?? 0)
+  })
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -35,14 +37,14 @@ export default async function ProgramsPage() {
               <th className="px-5 py-3 font-medium">Sponsor</th>
               <th className="px-5 py-3 font-medium">Status</th>
               <th className="px-5 py-3 font-medium">Period</th>
-              <th className="px-5 py-3 font-medium text-right">Budget</th>
-              <th className="px-5 py-3 font-medium text-right">Spent</th>
+              <th className="px-5 py-3 font-medium text-right">Budget (Burdened)</th>
+              <th className="px-5 py-3 font-medium text-right">Charged</th>
               <th className="px-5 py-3 font-medium text-right">Remaining</th>
             </tr>
           </thead>
           <tbody>
             {programs.map((p) => {
-              const budget    = Number(p.total_budget ?? 0)
+              const budget    = Number(p.total_budget_burdened ?? 0)
               const spent     = spendByProgram[p.program_id] ?? 0
               const remaining = budget - spent
               const pct       = budget > 0 ? ((spent / budget) * 100).toFixed(0) : '0'

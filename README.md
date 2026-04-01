@@ -4,6 +4,12 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 Apply the schema and seed data to your PostgreSQL database:
 
+Drop schema and table
+```bash
+  sudo -u postgres psql -d kript -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO mrobinson"                    
+```
+
+Generate schema and table
 ```bash
 psql -U mrobinson -d kript -f db/schema.sql
 psql -U mrobinson -d kript -f db/seed.sql

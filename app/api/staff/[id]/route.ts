@@ -7,13 +7,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const staff = await prisma.staff.update({
     where: { staff_id: Number(id) },
     data: {
-      first_name: body.first_name,
-      last_name:  body.last_name,
-      email:      body.email      || null,
-      job_title:  body.job_title  || null,
-      department: body.department || null,
-      hire_date:  body.hire_date  ? new Date(body.hire_date) : null,
-      is_active:  body.is_active,
+      first_name:     body.first_name,
+      last_name:      body.last_name,
+      email:          body.email          || null,
+      job_title:      body.job_title      || null,
+      department:     body.department     || null,
+      labor_category: body.labor_category || 'FTE',
+      hire_date:      body.hire_date      ? new Date(body.hire_date) : null,
+      is_active:      body.is_active,
     },
   })
   return NextResponse.json(staff)
