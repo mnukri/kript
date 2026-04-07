@@ -1,18 +1,27 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { useStore } from '@/lib/store'
 import ManageStaff from '@/components/manage/manage-staff'
 import ManagePrograms from '@/components/manage/manage-programs'
 import ManageCharges from '@/components/manage/manage-charges'
-
-const TABS = [
-  { id: 'staff',    label: 'Staff'    },
-  { id: 'programs', label: 'Programs' },
-  { id: 'charges',  label: 'Charges'  },
-]
+import ManagePurchases from '@/components/manage/manage-purchases'
+import ManageUsers from '@/components/manage/manage-users'
 
 export default function ManagePage() {
+  const { data: session } = useSession()
+  const role = session?.user.globalRole
+  const canManageUsers = role === 'admin' || role === 'manager'
+
+  const TABS = [
+    { id: 'staff',     label: 'Staff'     },
+    { id: 'programs',  label: 'Programs'  },
+    { id: 'charges',   label: 'Charges'   },
+    { id: 'purchases', label: 'Purchases' },
+    ...(canManageUsers ? [{ id: 'users', label: 'Users' }] : []),
+  ]
+
   const [tab, setTab] = useState('staff')
   const fetchAll = useStore((s) => s.fetchAll)
   useEffect(() => { fetchAll() }, [fetchAll])
@@ -40,9 +49,11 @@ export default function ManagePage() {
         ))}
       </div>
 
-      {tab === 'staff'    && <ManageStaff />}
-      {tab === 'programs' && <ManagePrograms />}
-      {tab === 'charges'  && <ManageCharges />}
+      {tab === 'staff'     && <ManageStaff />}
+      {tab === 'programs'  && <ManagePrograms />}
+      {tab === 'charges'   && <ManageCharges />}
+      {tab === 'purchases' && <ManagePurchases />}
+      {tab === 'users'     && canManageUsers && <ManageUsers />}
     </div>
   )
 }

@@ -44,6 +44,22 @@ enum ChargeStatus {
   @@map("charge_status")
 }
 
+enum GlobalRole {
+  admin
+  manager
+  staff
+
+  @@map("global_role")
+}
+
+enum AccessLevel {
+  read
+  write
+  approve
+
+  @@map("access_level")
+}
+
 // ---------------------------------------------------------------------------
 // Staff
 // ---------------------------------------------------------------------------
@@ -58,13 +74,17 @@ model Staff {
   labor_category LaborCategory
   hire_date      DateTime?      @db.Date
   is_active      Boolean        @default(true)
+  manager_id     Int?
   created_at     DateTime       @default(now())
 
+  manager        Staff?         @relation("StaffManager", fields: [manager_id], references: [staff_id])
+  reports        Staff[]        @relation("StaffManager")
   salaries       StaffSalary[]
   effortEntries  EffortEntry[]
   charges        Charge[]       @relation("StaffCharges")
   approvals      Charge[]       @relation("ApprovedCharges")
   programsAsTpoc Program[]      @relation("TpocStaff")
+  user           User?
 
   @@map("staff")
 }
@@ -122,11 +142,50 @@ model Program {
   tpoc_staff_id                             Int?
   created_at                                DateTime      @default(now())
 
-  tpoc          Staff?        @relation("TpocStaff", fields: [tpoc_staff_id], references: [staff_id])
+  tpoc          Staff?              @relation("TpocStaff", fields: [tpoc_staff_id], references: [staff_id])
   effortEntries EffortEntry[]
   charges       Charge[]
+  permissions   ProgramPermission[]
 
   @@map("programs")
+}
+
+// ---------------------------------------------------------------------------
+// Users
+// ---------------------------------------------------------------------------
+
+model User {
+  user_id       Int        @id @default(autoincrement())
+  staff_id      Int        @unique
+  email         String     @unique @db.VarChar(255)
+  microsoft_oid String?    @unique @db.VarChar(255)
+  global_role   GlobalRole @default(staff)
+  created_at    DateTime   @default(now())
+
+  staff       Staff               @relation(fields: [staff_id], references: [staff_id])
+  permissions ProgramPermission[] @relation("UserPermissions")
+  grants      ProgramPermission[] @relation("GrantedBy")
+
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Program permissions
+// ---------------------------------------------------------------------------
+
+model ProgramPermission {
+  permission_id Int         @id @default(autoincrement())
+  user_id       Int
+  program_id    Int
+  access_level  AccessLevel
+  granted_by    Int
+
+  user    User    @relation("UserPermissions", fields: [user_id],    references: [user_id])
+  program Program @relation(fields: [program_id], references: [program_id])
+  granter User    @relation("GrantedBy",       fields: [granted_by], references: [user_id])
+
+  @@unique([user_id, program_id])
+  @@map("program_permissions")
 }
 
 // ---------------------------------------------------------------------------

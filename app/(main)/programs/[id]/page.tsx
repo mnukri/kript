@@ -6,6 +6,10 @@ import StatCard from '@/components/stat-card'
 import BurnChart from '@/components/charts/burn-chart'
 import DonutChart from '@/components/charts/donut-chart'
 import StackedBarChart from '@/components/charts/stacked-bar-chart'
+import ForecastChart from '@/components/charts/forecast-chart'
+import type { ForecastPoint } from '@/components/charts/forecast-chart'
+import StaffChargesChart from '@/components/charts/staff-charges-chart'
+import type { StaffChargePoint } from '@/components/charts/staff-charges-chart'
 import { prisma } from '@/lib/prisma'
 import { formatCurrency, formatMonth } from '@/lib/mock-data'
 
@@ -151,6 +155,65 @@ export default async function ProgramDetailPage({ params }: { params: Promise<{ 
   const staffSummary = Array.from(staffTotals.entries())
     .map(([staff_id, v]) => ({ staff_id, ...v, total: v.effort + v.expenses }))
     .sort((a, b) => b.total - a.total)
+
+  const staffChargePoints: StaffChargePoint[] = staffSummary.map((s) => ({
+    name:     s.name,
+    effort:   s.effort,
+    expenses: s.expenses,
+    total:    s.total,
+  }))
+
+  // ── Forecast data ────────────────────────────────────────────────────────
+  let forecastData: ForecastPoint[] = monthlyData.map((d) => ({
+    month:       d.month,
+    effort:      d.effort,
+    expenses:    d.expenses,
+    projected:   0,
+    cumulative:  d.cumulative,
+    isProjected: false,
+    willOverrun: d.cumulative > budget,
+  }))
+
+  let firstProjMonth: string | null = null
+
+  if (popEnd && monthlyBurnRate > 0) {
+    // Start projections from the month after the last actual charge month,
+    // or from next calendar month if no charges yet
+    const lastActualKey = monthlyMap.size > 0
+      ? Array.from(monthlyMap.keys()).sort().at(-1)!
+      : null
+
+    const projStart = new Date(today)
+    projStart.setDate(1)
+    if (lastActualKey) {
+      // start one month after last recorded charge month
+      const [y, m] = lastActualKey.split('-').map(Number)
+      projStart.setFullYear(y)
+      projStart.setMonth(m) // month is 0-indexed; m from "YYYY-MM" is 1-indexed, so m = next month
+    } else {
+      projStart.setMonth(projStart.getMonth() + 1)
+    }
+
+    let cumRunning = running
+    let isFirst    = true
+
+    for (let d = new Date(projStart); d <= popEnd; ) {
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const label = formatMonth(key + '-01')
+      cumRunning += monthlyBurnRate
+      if (isFirst) { firstProjMonth = label; isFirst = false }
+      forecastData.push({
+        month:       label,
+        effort:      0,
+        expenses:    0,
+        projected:   Math.round(monthlyBurnRate),
+        cumulative:  Math.round(cumRunning),
+        isProjected: true,
+        willOverrun: cumRunning > budget,
+      })
+      d.setMonth(d.getMonth() + 1)
+    }
+  }
 
   return (
     <div className="max-w-6xl space-y-8">
@@ -348,6 +411,39 @@ export default async function ProgramDetailPage({ params }: { params: Promise<{ 
           ? <BurnChart data={monthlyData} budget={budget} />
           : <p className="text-sm text-zinc-400 py-10 text-center">No charge data yet.</p>}
       </div>
+
+      {/* ── Forecast chart ── */}
+      <div className="bg-white border border-zinc-200 rounded-lg p-5">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h2 className="text-sm font-medium text-zinc-700">Spend Forecast</h2>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Projected at {formatCurrency(monthlyBurnRate)}/mo average.
+              {projectedOverrun != null && projectedOverrun > 0 && (
+                <span className="ml-1 text-red-600 font-medium">
+                  Projected overrun: {formatCurrency(projectedOverrun)}
+                </span>
+              )}
+              {projectedOverrun != null && projectedOverrun <= 0 && (
+                <span className="ml-1 text-green-700 font-medium">
+                  On track — {formatCurrency(-projectedOverrun)} projected remaining
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+        {forecastData.length > 0
+          ? <ForecastChart data={forecastData} budget={budget} firstProjMonth={firstProjMonth} />
+          : <p className="text-sm text-zinc-400 py-10 text-center">No charge data to forecast from.</p>}
+      </div>
+
+      {/* ── Who charged this program ── */}
+      {staffChargePoints.length > 0 && (
+        <div className="bg-white border border-zinc-200 rounded-lg p-5">
+          <h2 className="text-sm font-medium text-zinc-700 mb-4">Charges by Staff</h2>
+          <StaffChargesChart data={staffChargePoints} />
+        </div>
+      )}
 
       {/* ── Effort by staff ── */}
       {effortMonthData.length > 0 && (

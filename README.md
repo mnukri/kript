@@ -6,7 +6,7 @@ Apply the schema and seed data to your PostgreSQL database:
 
 Drop schema and table
 ```bash
-  sudo -u postgres psql -d kript -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO mrobinson"                    
+sudo -u postgres psql -d kript -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO mrobinson"                    
 ```
 
 Generate schema and table

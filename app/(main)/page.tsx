@@ -27,6 +27,20 @@ export default async function HomePage() {
     const effort_spent   = pCharges.filter((c) => c.charge_type === 'effort')  .reduce((s, c) => s + Number(c.amount ?? 0), 0)
     const purchase_spent = pCharges.filter((c) => c.charge_type === 'purchase').reduce((s, c) => s + Number(c.amount ?? 0), 0)
     const travel_spent   = pCharges.filter((c) => c.charge_type === 'travel')  .reduce((s, c) => s + Number(c.amount ?? 0), 0)
+
+    // Build monthly breakdown for sparkline
+    const monthMap = new Map<string, { effort: number; expenses: number }>()
+    for (const c of pCharges) {
+      const key = formatMonth(c.charge_date.toISOString())
+      const entry = monthMap.get(key) ?? { effort: 0, expenses: 0 }
+      if (c.charge_type === 'effort') entry.effort += Number(c.amount ?? 0)
+      else entry.expenses += Number(c.amount ?? 0)
+      monthMap.set(key, entry)
+    }
+    const monthly = Array.from(monthMap.entries())
+      .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
+      .map(([month, v]) => ({ month, ...v }))
+
     return {
       program_id:     p.program_id,
       program_name:   p.program_name,
@@ -37,6 +51,9 @@ export default async function HomePage() {
       effort_spent,
       purchase_spent,
       travel_spent,
+      pop_start:      p.pop_start?.toISOString() ?? null,
+      pop_end:        p.pop_end?.toISOString()   ?? null,
+      monthly,
     }
   })
 
